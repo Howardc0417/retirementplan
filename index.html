@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>退休精算師：級距完全顯示版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; background-color: #f1f5f9; }
+        .slider { -webkit-appearance: none; width: 100%; height: 6px; border-radius: 5px; background: #cbd5e1; outline: none; }
+        .slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #4f46e5; cursor: pointer; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+        .card { background: white; border-radius: 1.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border: 1px solid #e2e8f0; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-black text-slate-800">💰 退休資產模擬 (含級距與通膨)</h1>
+            <p class="text-slate-500 mt-2 text-sm font-bold uppercase text-indigo-600">勞保上限 45,800 / 勞退上限 150,000</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-4 space-y-6">
+                <div class="card p-6 border-l-8 border-indigo-600">
+                    <h3 class="font-bold text-indigo-700 mb-4 text-xs tracking-widest uppercase">收入與通膨參數</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-1">目前月薪 (元)</label>
+                            <input type="number" id="realSalary" value="60000" class="w-full border-2 border-slate-100 rounded-xl p-2 font-black text-slate-700 outline-none">
+                            <div class="flex justify-between mt-2 px-1">
+                                <span class="text-[10px] text-slate-500">勞保基數: <b id="laborGradeLabel" class="text-indigo-600">--</b></span>
+                                <span class="text-[10px] text-slate-500">勞退基數: <b id="pensionGradeLabel" class="text-indigo-600">--</b></span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-indigo-600 mb-1">勞退個人自提比例: <span id="selfRVal">6</span>%</label>
+                            <input type="range" id="selfR" min="0" max="6" step="1" value="6" class="slider">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-red-600 mb-1">預期年通膨率: <span id="infVal">2</span>%</label>
+                            <input type="range" id="infRate" min="0" max="5" step="0.1" value="2" class="slider">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 border-t pt-4">
+                            <div><label class="text-[10px] font-bold text-slate-400">目前年齡</label><input type="number" id="age" value="35" class="w-full border rounded-lg p-2 font-bold"></div>
+                            <div><label class="text-[10px] font-bold text-slate-400">退休年齡</label><input type="number" id="retAge" value="65" class="w-full border rounded-lg p-2 font-bold"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card p-6 border-l-8 border-blue-500">
+                    <h3 class="font-bold text-blue-700 mb-4 text-xs tracking-widest uppercase">個人投資累積</h3>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div><label class="text-[10px] font-bold text-slate-400">現有本金</label><input type="number" id="initialCapital" value="1000000" class="w-full border rounded-lg p-2 text-sm font-bold"></div>
+                            <div><label class="text-[10px] font-bold text-slate-400">每月投資</label><input type="number" id="extra" value="15000" class="w-full border rounded-lg p-2 text-sm font-bold text-emerald-600"></div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-emerald-600 mb-1">累積期投報率: <span id="rateVal">6</span>%</label>
+                            <input type="range" id="rate" min="0" max="15" step="0.1" value="6" class="slider">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card p-6 border-l-8 border-orange-500">
+                    <h3 class="font-bold text-orange-700 mb-4 text-xs tracking-widest uppercase">退休生活設定</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-orange-700 mb-1">月生活費 (現在物價)</label>
+                            <input type="number" id="spend" value="65000" class="w-full border-2 border-orange-50 rounded-xl p-2 font-black text-orange-600">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-1">退休續投報酬率: <span id="retRateVal">3</span>%</label>
+                            <input type="range" id="retRate" min="0" max="8" step="0.1" value="3" class="slider">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-8 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-indigo-700 p-6 rounded-[2rem] text-white shadow-xl">
+                        <p class="text-xs opacity-80 font-bold mb-1">政府每月給付 (退休首年)</p>
+                        <p id="govMonthly" class="text-4xl font-black">$0</p>
+                        <hr class="my-3 opacity-20">
+                        <div class="grid grid-cols-2 gap-2 text-[11px]">
+                            <div><p class="opacity-70 font-bold">勞保年金 (預估)</p><p id="laborDetail" class="font-bold text-sm">--</p></div>
+                            <div><p class="opacity-70 font-bold">勞退月領 (專戶)</p><p id="pensionDetail" class="font-bold text-sm">--</p></div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-800 p-6 rounded-[2rem] text-white shadow-xl border-b-8 border-red-500">
+                        <p class="text-xs opacity-80 font-bold mb-1">資產用罄年紀 / 退休總額</p>
+                        <div class="flex items-baseline gap-2">
+                            <p id="depletionAge" class="text-4xl font-black text-orange-400">-- 歲</p>
+                            <p class="text-xs opacity-50">退休時有 $<span id="totalAtRet">0</span></p>
+                        </div>
+                        <p id="gapReport" class="text-[10px] text-red-300 mt-4 leading-tight"></p>
+                    </div>
+                </div>
+
+                <div class="card p-6 h-[400px]"><canvas id="mainChart"></canvas></div>
+
+                <div id="reportBox" class="card p-6 bg-slate-50 border-none">
+                    <h4 class="font-bold text-slate-800 mb-2">📌 財務備註與精算基礎</h4>
+                    <ul id="reportMsg" class="text-xs text-slate-500 space-y-2 list-disc pl-4"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chart;
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        const fmt = (n) => Math.round(n).toLocaleString();
+
+        function update() {
+            const realSalary = parseFloat(document.getElementById('realSalary').value) || 0;
+            const initCap = parseFloat(document.getElementById('initialCapital').value) || 0;
+            const extra = parseFloat(document.getElementById('extra').value) || 0;
+            const age = parseInt(document.getElementById('age').value);
+            const retAge = parseInt(document.getElementById('retAge').value);
+            const infRate = parseFloat(document.getElementById('infRate').value) / 100;
+            const annRate = parseFloat(document.getElementById('rate').value) / 100;
+            const retAnnRate = parseFloat(document.getElementById('retRate').value) / 100;
+            const selfR = parseFloat(document.getElementById('selfR').value);
+            const spendToday = parseFloat(document.getElementById('spend').value) || 0;
+
+            // 1. 級距判定與標籤更新
+            const laborGrade = Math.min(realSalary, 45800);
+            const pensionGrade = Math.min(realSalary, 150000);
+            document.getElementById('laborGradeLabel').innerText = fmt(laborGrade);
+            document.getElementById('pensionGradeLabel').innerText = fmt(pensionGrade);
+
+            document.getElementById('infVal').innerText = (infRate * 100).toFixed(1);
+            document.getElementById('rateVal').innerText = (annRate * 100).toFixed(1);
+            document.getElementById('retRateVal').innerText = (retAnnRate * 100).toFixed(1);
+            document.getElementById('selfRVal').innerText = selfR;
+
+            // 2. 勞保勞退計算
+            const years = Math.max(retAge - 25, 30);
+            const laborMonthly = laborGrade * years * 0.0155;
+            let fundBalance = 0;
+            const fundMonthlyContrib = pensionGrade * (0.06 + selfR/100);
+            const fundMRate = Math.pow(1 + 0.035, 1/12) - 1;
+            for(let i=0; i<(retAge-age)*12; i++) fundBalance = (fundBalance + fundMonthlyContrib) * (1 + fundMRate);
+            const fundMonthly = fundBalance / 288;
+            const govTotal = laborMonthly + fundMonthly;
+
+            document.getElementById('govMonthly').innerText = '$' + fmt(govTotal);
+            document.getElementById('laborDetail').innerText = '$' + fmt(laborMonthly);
+            document.getElementById('pensionDetail').innerText = '$' + fmt(fundMonthly);
+
+            // 3. 模擬邏輯 (通膨提領逐年增加)
+            const mRate = Math.pow(1 + annRate, 1/12) - 1;
+            const rRate = Math.pow(1 + retAnnRate, 1/12) - 1;
+            let currentAsset = initCap;
+            let labels = [];
+            let data = [];
+            let deAge = 100;
+            let nominalSpend = spendToday * Math.pow(1 + infRate, retAge - age);
+
+            document.getElementById('gapReport').innerText = `受通膨影響，退休時月支出需 $${fmt(nominalSpend)} 才能維持現有生活品質。`;
+
+            for(let a = age; a <= 100; a++) {
+                labels.push(a + '歲');
+                data.push(Math.round(currentAsset));
+                if(a < retAge) {
+                    for(let m=0; m<12; m++) currentAsset = (currentAsset * (1 + mRate)) + extra;
+                } else if(a === retAge) {
+                    document.getElementById('totalAtRet').innerText = fmt(currentAsset);
+                } else {
+                    const annualGap = (nominalSpend - govTotal) * 12;
+                    if(currentAsset > 0) {
+                        currentAsset = (currentAsset * (1 + retAnnRate)) - annualGap;
+                        nominalSpend *= (1 + infRate);
+                        if(currentAsset <= 0) { currentAsset = 0; deAge = a; }
+                    } else { currentAsset = 0; if(deAge === 100) deAge = a; }
+                }
+            }
+            document.getElementById('depletionAge').innerText = (deAge >= 100) ? '100+' : deAge + ' 歲';
+
+            document.getElementById('reportMsg').innerHTML = `
+                <li><b>基數說明：</b> 勞保最高採計 $45,800；勞退個人專戶採計上限為 $150,000。</li>
+                <li><b>通膨影響：</b> 在 ${(infRate*100).toFixed(1)}% 通膨下，退休後的購買力將顯著下降。</li>
+                <li><b>專戶總額：</b> 退休時您的勞退個人專戶累積金額為 $${fmt(fundBalance)}。</li>
+            `;
+
+            if(chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets: [{ data, borderColor: '#4f46e5', borderWidth: 4, pointRadius: 0, fill: true, backgroundColor: 'rgba(79,70,229,0.05)', tension: 0.4 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+            });
+        }
+        document.querySelectorAll('input').forEach(el => el.addEventListener('input', update));
+        update();
+    </script>
+</body>
+</html>
